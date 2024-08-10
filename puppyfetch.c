@@ -81,6 +81,8 @@ struct info_entry {
 // TODO: RAM doesnt report properly
 // TODO: Generalize param skips (rather than harcoding SKIP_LINEs)
 // in case of position-dependence breaking
+// TODO: Better parsers/buffer safety
+// TODO: More descriptive exit codes etc
 // TODO: Configurable options ?
 // TODO: Colors
 
@@ -125,6 +127,10 @@ int main(int argc, const char** argv) {
         art_cursor = art_drawline(art_cursor, width);
         if (!is_entry_null(lines[i]))
             printf("%s%s", lines[i].name, lines[i].value);
+        puts("");
+    }
+    while (*art_cursor) {
+        art_cursor = art_drawline(art_cursor, width);
         puts("");
     }
 }
@@ -299,7 +305,7 @@ void get_os(char* buf, size_t max_size) {
     while (strcmp("PRETTY_NAME", keybuf) != 0) {
         buf[max_size-1] = 0;
         fscanf(fs, "%255[^=]=%*[\"]%31s", keybuf, buf);
-        fscanf(fs, "%*[^\n]\n");
+        fscanf(fs, SKIP_LINE);
         if (guard-- == 0) {
             fprintf(stderr, "%s: /etc/os-release read failed.\n", this_path);
             exit(ERR_OS_BROKEN_STREAM);

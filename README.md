@@ -12,5 +12,10 @@ $ make
 
 # Installing 
 ```sh
-$ sudo make install
+$ sudo make install 
+```
+
+# Uninstalling 
+```sh
+$ sudo make uninstall 
 ```
