@@ -77,6 +77,8 @@ struct info_entry {
 #define is_entry_null(meta) (meta.name == NULL)
 
 // TODO: RAM doesnt report properly
+// TODO: Generalize param skips (rather than harcoding SKIP_LINEs)
+// in case of position-dependence breaking
 // TODO: Configurable options ?
 // TODO: Colors
 

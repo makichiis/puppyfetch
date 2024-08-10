@@ -5,5 +5,10 @@ puppyfetch is a system fetch for some Linux distributions.
 
 # Building 
 ```sh 
-gcc -o puppyfetch puppyfetch.c
+make 
+```
+
+# Installing 
+```sh
+$ sudo make install
 ```
