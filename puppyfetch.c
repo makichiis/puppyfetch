@@ -85,19 +85,22 @@ struct info_entry {
 // TODO: More descriptive exit codes etc
 // TODO: Configurable options ?
 // TODO: Colors
+// TODO: Look into cpuid to do more native-fetching of CPU info
+//        maybe not if i want to support some ARM chips, though
 
 int main(int argc, const char** argv) {
     this_path = argv[0];
     //char username[USERNAME_BUFSZ];
     const char* username = "<could not be determined>";
-    char hostname[HOSTNAME_BUFSZ];
+    //char hostname[HOSTNAME_BUFSZ];
+    const char* hostname = "<could not be determined>";
     char cpuinfo_summary[64] = {};
     char meminfo_summary[64] = {};
     char os_name[64] = {};
 
     //getlogin_r(username, sizeof username);
-    username = getlogin();
-    gethostname(hostname, sizeof hostname);
+    username = getenv("USER");
+    hostname = getenv("HOST");
     get_cpuinfo_model(cpuinfo_summary, sizeof cpuinfo_summary);
     get_meminfo_usage(meminfo_summary, sizeof meminfo_summary);
     get_os(os_name, sizeof os_name);
@@ -126,6 +129,7 @@ int main(int argc, const char** argv) {
     size_t width = get_art_square_width(art);
     
     for (size_t i = 0; i < arrlen(lines); ++i) {
+        // TODO: Fix to print in order rather than segmented
         art_cursor = art_drawline(art_cursor, width);
         if (!is_entry_null(lines[i]) && strlen(lines[i].value) > 0)
             printf("%s%s", lines[i].name, lines[i].value);
@@ -204,23 +208,6 @@ void get_pkgs_info(char* buf, size_t max_size) {
     pclose(fp);
 
     snprintf(buf, max_size, "dpkg (%ld)", dpkg_count);
-}
-
-// ref: AMD Ryzen 5 4600H with Radeon Graphics (12) @ 3.000GHz
-
-#define NEXT_LINE(pbuf) {\
-    for (size_t i = 0; i < sizeof pbuf; ++i)\
-        \
-}
-
-static inline const char* pf__next_line(const char* buf, const char* end) {
-    while (buf != end) {
-        if (*buf == '\n')
-            return buf+1;
-        ++buf;
-    }
-
-    return end;
 }
 
 // I have no idea how to do this on a system level without 

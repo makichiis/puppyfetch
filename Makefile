@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -O2
+CFLAGS = -Wall -Wextra -O2 -Wno-unused-result -Wno-unused-parameter
 TARGET = puppyfetch
 SRC = puppyfetch.c
 PREFIX = /usr/bin
