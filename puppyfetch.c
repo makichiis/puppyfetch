@@ -8,6 +8,8 @@
 
 #include "ANSI-color-codes.h"
 
+#define ERR_OS_BROKEN_STREAM 25
+
 const char* puppy = 
 "  /^ ^\\    \n" \
 " / 0 0 \\   \n" \
@@ -286,15 +288,27 @@ void get_meminfo_usage(char* buf, size_t max_size) {
     snprintf(buf, max_size, "%lld mib / %lld mib", memused_mib, memtotal_mib);
 }
 
+#define OS_RELEASE_GUARD_LEN 20 
+
 void get_os(char* buf, size_t max_size) {
-    buf[max_size-1] = '\0'; // I call this ensurance
     FILE* fs = fopen("/etc/os-release", "r");
 
-    fscanf(fs, SKIP_LINE SKIP_LINE SKIP_LINE SKIP_LINE "PRETTY_NAME=\"%[^\"]", buf);
+    char keybuf[256] = {};
+    
+    size_t guard = OS_RELEASE_GUARD_LEN;
+    while (strcmp("PRETTY_NAME", keybuf) != 0) {
+        buf[max_size-1] = 0;
+        fscanf(fs, "%255[^=]=%*[\"]%31s", keybuf, buf);
+        fscanf(fs, "%*[^\n]\n");
+        if (guard-- == 0) {
+            fprintf(stderr, "%s: /etc/os-release read failed.\n", this_path);
+            exit(ERR_OS_BROKEN_STREAM);
+        }
+    }
 
     if (buf[max_size-1] != '\0') {
         perror("Shit broke here and I'm gonna quit while we're ahead in case this is an exploit.");
-        exit(23);
+        exit(ERR_OS_BROKEN_STREAM);
     }
 
     fclose(fs);

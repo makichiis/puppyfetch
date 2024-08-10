@@ -13,6 +13,10 @@ $(TARGET): $(SRC)
 install: $(TARGET)
 	install -m 755 $(TARGET) $(PREFIX)/$(TARGET)
 
+.PHONY: uninstall 
+uninstall:
+	rm -f $(PREFIX)/$(TARGET)
+
 .PHONY: clean
 clean:
 	rm -f $(TARGET)
