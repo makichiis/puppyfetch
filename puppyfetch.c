@@ -92,15 +92,14 @@ int main(int argc, const char** argv) {
     this_path = argv[0];
     //char username[USERNAME_BUFSZ];
     const char* username = "<could not be determined>";
-    //char hostname[HOSTNAME_BUFSZ];
-    const char* hostname = "<could not be determined>";
+    char hostname[HOSTNAME_BUFSZ];
     char cpuinfo_summary[64] = {};
     char meminfo_summary[64] = {};
     char os_name[64] = {};
 
     //getlogin_r(username, sizeof username);
     username = getenv("USER");
-    hostname = getenv("HOST");
+    gethostname(hostname, sizeof hostname);
     get_cpuinfo_model(cpuinfo_summary, sizeof cpuinfo_summary);
     get_meminfo_usage(meminfo_summary, sizeof meminfo_summary);
     get_os(os_name, sizeof os_name);
