@@ -76,8 +76,6 @@ struct info_entry {
 
 #define is_entry_null(meta) (meta.name == NULL)
 
-#define gotoxy(x, y) printf("\033[%d;%dH", (y), (x))
-
 // TODO: RAM doesnt report properly
 // TODO: Configurable options ?
 // TODO: Colors
@@ -152,6 +150,12 @@ const char* art_drawline(const char* art_cursor, size_t total_width) {
 
     while (*art_cursor && *art_cursor != '\n') {
         putc(*art_cursor++, stdout);
+        ++written;
+    }
+
+    while (written < total_width) {
+        putc(' ', stdout);
+        ++written;
     }
 
     return 1 + art_cursor;
