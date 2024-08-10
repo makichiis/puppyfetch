@@ -76,7 +76,7 @@ struct info_entry {
     const char* value;
 };
 
-#define is_entry_null(meta) (meta.name == NULL)
+#define is_entry_null(meta) (meta.name == NULL || meta.value == NULL)
 
 // TODO: RAM doesnt report properly
 // TODO: Generalize param skips (rather than harcoding SKIP_LINEs)
@@ -88,13 +88,15 @@ struct info_entry {
 
 int main(int argc, const char** argv) {
     this_path = argv[0];
-    char username[USERNAME_BUFSZ];
+    //char username[USERNAME_BUFSZ];
+    const char* username = "<could not be determined>";
     char hostname[HOSTNAME_BUFSZ];
     char cpuinfo_summary[64] = {};
     char meminfo_summary[64] = {};
     char os_name[64] = {};
 
-    getlogin_r(username, sizeof username);
+    //getlogin_r(username, sizeof username);
+    username = getlogin();
     gethostname(hostname, sizeof hostname);
     get_cpuinfo_model(cpuinfo_summary, sizeof cpuinfo_summary);
     get_meminfo_usage(meminfo_summary, sizeof meminfo_summary);
@@ -266,7 +268,7 @@ void get_meminfo_usage(char* buf, size_t max_size) {
         return;
     }
 
-    long long mem_total;
+    long long mem_total = 0;
     long long mem_used = 0;
 
     char param_name[64];
@@ -298,8 +300,8 @@ void get_meminfo_usage(char* buf, size_t max_size) {
 
     fclose(fs);
 
-    long long memused_mib = mem_used / 1049;
-    long long memtotal_mib = mem_total / 1049;
+    long long memused_mib = (double)mem_used / 1000 / 1.0049;
+    long long memtotal_mib = (double)mem_total / 1000 / 1.0049;
 
     snprintf(buf, max_size, "%lld mib / %lld mib", memused_mib, memtotal_mib);
 }
