@@ -245,7 +245,11 @@ void get_cpuinfo_model(char* buf, size_t max_size) {
            SKIP_LINE SKIP_LINE SCAN_CPUINFO_KEY "%d", key, &threads);
 
     // cpuinfo doesnt HAVE INFO ABOUT CPU CLOCK MAX 
-    fs = freopen("/sys/devices/system/cpu/cpu0/cpufreq/bios_limit", "r", fs);
+    fs = freopen("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq", "r", fs);
+    if (!fs) {
+        snprintf(buf, max_size, "%s %dt", model_prefix, threads);
+        return;
+    }
     fscanf(fs, "%d", &clkkhz);
 
     fclose(fs);
