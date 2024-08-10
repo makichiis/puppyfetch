@@ -6,13 +6,33 @@
 #include <sys/ioctl.h>
 #include <sys/utsname.h>
 
-const char* puppy = ""\
+#include "ANSI-color-codes.h"
+
+const char* puppy = 
 "  /^ ^\\    \n" \
 " / 0 0 \\   \n" \
 " V\\ Y /V   \n" \
 "  / - \\    \n" \
 " /    |    \n" \
 "V__) ||    \n";
+
+/**
+ * @brief Get the square width of a string whose rows are delimited by newlines.
+ * The square width refers to the longest "line" (newline-delimited substring) 
+ * in `art`.
+ * @return The length of the largest line in the newline-separated string.
+ */ 
+size_t get_art_square_width(const char* art);
+
+/**
+ * @brief Write up to `total_width` ASCII characters to stdout, or until a 
+ * newline is read. If the number of ASCII characters written is less than 
+ * `total_width`, `2 + total_width - written` whitespace characters will be written 
+ * to stdout. If NULL is passed, `2 + total_width` characters are written to stdout.
+ * @return A pointer to 1 + the address of the newline scanned, or NULL if a 
+ * null-terminating character ('\0') is read.
+ */ 
+const char* art_drawline(const char* art_cursor, size_t total_width);
 
 // https://man7.org/linux/man-pages/man7/hostname.7.html
 #define HOSTNAME_BUFSZ _SC_HOST_NAME_MAX  
@@ -25,6 +45,7 @@ const char* puppy = ""\
 
 static const char* this_path;
 
+// deprecated 
 void get_pkgs_info(char* buf, size_t max_size);
 
 /**
@@ -41,36 +62,36 @@ void get_cpuinfo_model(char* buf, size_t max_size);
  */ 
 void get_meminfo_usage(char* buf, size_t max_size);
 
+/**
+ * @brief Get OS name.
+ */  
 void get_os(char* buf, size_t max_size);
-
-const char* art = "";
 
 #define arrlen(arr) (sizeof arr / sizeof *arr)
 
-
-// pgks: dpkg -l | wc -l
-
-struct meta {
+struct info_entry {
     const char* name;
     const char* value;
 };
 
-#define meta_null(meta) (meta.name == NULL)
+#define is_entry_null(meta) (meta.name == NULL)
 
 #define gotoxy(x, y) printf("\033[%d;%dH", (y), (x))
+
+// TODO: RAM doesnt report properly
+// TODO: Configurable options ?
+// TODO: Colors
 
 int main(int argc, const char** argv) {
     this_path = argv[0];
     char username[USERNAME_BUFSZ];
     char hostname[HOSTNAME_BUFSZ];
-    char packages_summary[64];
     char cpuinfo_summary[64];
     char meminfo_summary[64];
     char os_name[64];
 
     getlogin_r(username, sizeof username);
     gethostname(hostname, sizeof hostname);
-    //get_pkgs_info(packages_summary, sizeof packages_summary);
     get_cpuinfo_model(cpuinfo_summary, sizeof cpuinfo_summary);
     get_meminfo_usage(meminfo_summary, sizeof meminfo_summary);
     get_os(os_name, sizeof os_name);
@@ -82,26 +103,61 @@ int main(int argc, const char** argv) {
         exit(1);
     }
 
-    struct meta lines[6] = {
-        { "os     ", os_name },
-        { "cpu    ", cpuinfo_summary }, 
-        { "kernel ", name.release },
-        { "server ", getenv("XDG_SESSION_TYPE") },
-        //{ "pkgs   ", packages_summary }, 
-        { "memory ", meminfo_summary },
+    char userbuf[USERNAME_BUFSZ+HOSTNAME_BUFSZ + 64]; // 64 for color padding
+    snprintf(userbuf, sizeof userbuf, HMAG "%s" reset "@" HBLU "%s" reset, username, hostname);
+
+    struct info_entry lines[6] = {
+        { "", userbuf },
+        { HBLU "os     " reset, os_name },
+        { HMAG "cpu    " reset, cpuinfo_summary }, 
+        { BWHT "kernel " reset, name.release },
+        { HMAG "server " reset, getenv("XDG_SESSION_TYPE") },
+        { HBLU "memory " reset, meminfo_summary },
     };
 
-    printf("%s\n", puppy);
-
-    int written = printf("%s@%s\n", username, hostname);
-
+    const char* art = puppy;
+    const char* art_cursor = art;
+    size_t width = get_art_square_width(art);
+    
     for (size_t i = 0; i < arrlen(lines); ++i) {
-        if (!meta_null(lines[i])) printf("%s %s\n", 
-                                lines[i].name,
-                                lines[i].value);
+        art_cursor = art_drawline(art_cursor, width);
+        if (!is_entry_null(lines[i]))
+            printf("%s%s", lines[i].name, lines[i].value);
+        puts("");
     }
 }
 
+#define max(a, b) (a > b ? a : b)
+
+size_t get_art_square_width(const char* art) {
+    size_t max_width = 0;
+    size_t width = 0;
+
+    while (*art) {
+        if (*art == '\n') {
+            max_width = max(max_width, width);
+            width = 0;
+        } else {
+            ++width;
+        }
+
+        ++art;
+    }
+
+    return max_width;
+}
+
+const char* art_drawline(const char* art_cursor, size_t total_width) {
+    size_t written = 0;
+
+    while (*art_cursor && *art_cursor != '\n') {
+        putc(*art_cursor++, stdout);
+    }
+
+    return 1 + art_cursor;
+}
+
+// deprecated
 void get_pkgs_info(char* buf, size_t max_size) {
     FILE* fp = popen("dpkg -l", "r");
     
@@ -154,40 +210,30 @@ static inline const char* pf__next_line(const char* buf, const char* end) {
 // I have no idea how to do this on a system level without 
 // platform-specific kernel bindings 
 
-// Cant use parsable rows becuase they exclude the mode name 
-#define CPU_QUERY "lscpu | grep -E 'CPU\\(s\\):|Model name:|max MHz:' | tr -s ' ' | cut -d ':' -f 2"
+#define SKIP_LINE "%*[^\n]\n"
+#define SCAN_CPUINFO_KEY "%[^:]:"
 
 void get_cpuinfo_model(char* buf, size_t max_size) {
-    // if this sucks (formatting fails on other systems) 
-    // i'll get around to changing it 
-    
-    FILE* pipe = popen(CPU_QUERY, "r");
+    FILE* fs = fopen("/proc/cpuinfo", "r");
 
-    char pbuf[2048]; // fits all relevant information 
-    
-    read(fileno(pipe), pbuf, sizeof pbuf);
-    pclose(pipe);
+    char key[32];
+    char model_prefix[32];
+    int threads;
+    int clkkhz;
 
-    // god forbid any of these be platform-dependent
-    // the rationale is in the bash output of `CPU_QUERY`
-    // I need to test if this is preferrable to in-program
-    // parsing of lscpu output.
+    // skip to model name
+    fscanf(fs, SKIP_LINE SKIP_LINE SKIP_LINE SKIP_LINE SCAN_CPUINFO_KEY "%s", key, model_prefix);
+    // skip to siblings
+    fscanf(fs, SKIP_LINE SKIP_LINE SKIP_LINE SKIP_LINE\
+           SKIP_LINE SKIP_LINE SCAN_CPUINFO_KEY "%d", key, &threads);
 
-    const char* pbufp = pbuf;
+    // cpuinfo doesnt HAVE INFO ABOUT CPU CLOCK MAX 
+    fs = freopen("/sys/devices/system/cpu/cpu0/cpufreq/bios_limit", "r", fs);
+    fscanf(fs, "%d", &clkkhz);
 
-    int cpu_count;
-    sscanf(pbufp+1, "%d", &cpu_count);
-    
-    char cpu_model[128];
-    pbufp = pf__next_line(pbufp, pbuf + 2048);
-    sscanf(pbufp+1, "%s", cpu_model);
+    fclose(fs);
 
-    int speed_mhz;
-    pbufp = pf__next_line(pbufp, pbuf + 2048);
-    sscanf(pbufp, "%d", &speed_mhz);
-    double speed_ghz = ((double)speed_mhz) / 1000;
-
-    snprintf(buf, max_size, "%s %dc @ %.4lf GHz", cpu_model, cpu_count, speed_ghz);
+    snprintf(buf, max_size, "%s %dt @ %.4lf GHz", model_prefix, threads, ((double)clkkhz) / 1000000.0);
 }
 
 // MemUsed = Memtotal + Shmem - MemFree - Buffers - Cached - SReclaimable
@@ -220,6 +266,7 @@ void get_meminfo_usage(char* buf, size_t max_size) {
             mem_used -= value;
         } else if (strcmp(param_name, "SReclaimable:") == 0) {
             mem_used -= value;
+            break;
         } else if (strcmp(param_name, "Cached:") == 0) {
             mem_used -= value;
         }
@@ -233,23 +280,17 @@ void get_meminfo_usage(char* buf, size_t max_size) {
     snprintf(buf, max_size, "%lld mib / %lld mib", memused_mib, memtotal_mib);
 }
 
-// refer to pfetch source for reference.
-// Using only lsb_release for now since I only care about
-// a few systems.
-
-// lsb-release -sd is slow (8.5ms)
-#define OS_NAME_QUERY "cat /etc/os-release | grep PRETTY_NAME | cut -d '\"' -f 2"
-
 void get_os(char* buf, size_t max_size) {
-    FILE* pipe = popen(OS_NAME_QUERY, "r");
+    buf[max_size-1] = '\0'; // I call this ensurance
+    FILE* fs = fopen("/etc/os-release", "r");
 
-    ssize_t bytes_read = read(fileno(pipe), buf, 256);
-    if (bytes_read == -1) {
-        perror("BAD PIPE.");
-        exit(1);
+    fscanf(fs, SKIP_LINE SKIP_LINE SKIP_LINE SKIP_LINE "PRETTY_NAME=\"%[^\"]", buf);
+
+    if (buf[max_size-1] != '\0') {
+        perror("Shit broke here and I'm gonna quit while we're ahead in case this is an exploit.");
+        exit(23);
     }
-    buf[bytes_read-1] = '\0'; // truncate newline
 
-    pclose(pipe);
+    fclose(fs);
 }
 
