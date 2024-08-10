@@ -90,9 +90,9 @@ int main(int argc, const char** argv) {
     this_path = argv[0];
     char username[USERNAME_BUFSZ];
     char hostname[HOSTNAME_BUFSZ];
-    char cpuinfo_summary[64];
-    char meminfo_summary[64];
-    char os_name[64];
+    char cpuinfo_summary[64] = {};
+    char meminfo_summary[64] = {};
+    char os_name[64] = {};
 
     getlogin_r(username, sizeof username);
     gethostname(hostname, sizeof hostname);
@@ -125,7 +125,7 @@ int main(int argc, const char** argv) {
     
     for (size_t i = 0; i < arrlen(lines); ++i) {
         art_cursor = art_drawline(art_cursor, width);
-        if (!is_entry_null(lines[i]))
+        if (!is_entry_null(lines[i]) && strlen(lines[i].value) > 0)
             printf("%s%s", lines[i].name, lines[i].value);
         puts("");
     }
@@ -229,6 +229,9 @@ static inline const char* pf__next_line(const char* buf, const char* end) {
 
 void get_cpuinfo_model(char* buf, size_t max_size) {
     FILE* fs = fopen("/proc/cpuinfo", "r");
+    if (!fs) {
+        return;
+    }
 
     char key[32];
     char model_prefix[32];
@@ -255,6 +258,9 @@ void get_cpuinfo_model(char* buf, size_t max_size) {
 
 void get_meminfo_usage(char* buf, size_t max_size) {
     FILE* fs = fopen("/proc/meminfo", "r");
+    if (!fs) {
+        return;
+    }
 
     long long mem_total;
     long long mem_used = 0;
@@ -298,6 +304,9 @@ void get_meminfo_usage(char* buf, size_t max_size) {
 
 void get_os(char* buf, size_t max_size) {
     FILE* fs = fopen("/etc/os-release", "r");
+    if (!fs) {
+        return;
+    }
 
     char keybuf[256] = {};
     
