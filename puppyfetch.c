@@ -225,6 +225,11 @@ void get_pkgs_info(char* buf, size_t max_size) {
 #define END_LINE "%*[\n]"
 #define SCAN_CPUINFO_KEY "%[^:]:"
 
+struct vendor_mapping {
+    const char* vendor;
+    const char* prettier;
+};
+
 void get_cpuinfo_model(char* buf, size_t max_size) {
     FILE* fs = fopen("/proc/cpuinfo", "r");
     if (!fs) {
@@ -232,28 +237,48 @@ void get_cpuinfo_model(char* buf, size_t max_size) {
     }
 
     char key[32];
-    char model_prefix[32];
+    char vendor[32];
     int threads;
     int clkkhz;
 
     // skip to model name
-    fscanf(fs, SKIP_LINE SCAN_CPUINFO_KEY "%s\n", key, model_prefix);
+    fscanf(fs, SKIP_LINE SCAN_CPUINFO_KEY "%s\n", key, vendor);
     // skip to siblings
     fscanf(fs, SKIP_LINE SKIP_LINE SKIP_LINE SKIP_LINE \
            SKIP_LINE SKIP_LINE SKIP_LINE SKIP_LINE \
            SCAN_CPUINFO_KEY "%d", key, &threads);
 
+    // prettify certain vendor names 
+    // TODO: Contributions welcome
+    // The array length is arbitrary. Extend it if the list gets too big.
+    struct vendor_mapping mappings[64] = {
+        { "AuthenticAMD", /* --> */ "AMD" },
+    };
+
+    for (size_t i = 0; 
+            (i < sizeof mappings / sizeof (struct vendor_mapping)) 
+            && mappings[i].vendor != NULL; ++i) {
+        if (strcmp(mappings[i].vendor, vendor) == 0) {
+            strcpy(vendor, mappings[i].prettier);
+            break;
+        }
+    }
+
+    if (strcmp("AuthenticAMD", vendor) == 0) {
+        strcpy(vendor, "AuthenticAMD");
+    }
+
     // cpuinfo doesnt HAVE INFO ABOUT CPU CLOCK MAX 
     fs = freopen("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq", "r", fs);
     if (!fs) {
-        snprintf(buf, max_size, "%s %dt", model_prefix, threads);
+        snprintf(buf, max_size, "%s %dt", vendor, threads);
         return;
     }
     fscanf(fs, "%d", &clkkhz);
 
     fclose(fs);
 
-    snprintf(buf, max_size, "%s %dt @ %.4lf GHz", model_prefix, threads, ((double)clkkhz) / 1000000.0);
+    snprintf(buf, max_size, "%s %dt @ %.4lf GHz", vendor, threads, ((double)clkkhz) / 1000000.0);
 }
 
 // MemUsed = Memtotal + Shmem - MemFree - Buffers - Cached - SReclaimable
