@@ -126,14 +126,23 @@ int main(int argc, const char** argv) {
     const char* art = puppy;
     const char* art_cursor = art;
     size_t width = get_art_square_width(art);
-    
+
     for (size_t i = 0; i < arrlen(lines); ++i) {
+        while (is_entry_null(lines[i]) || strlen(lines[i].value) == 0)
+            ++i;
+        if (i >= arrlen(lines)) break;
+
+        art_cursor = art_drawline(art_cursor, width);
+        printf("%s%s\n", lines[i].name, lines[i].value);
+    }
+    
+    /*for (size_t i = 0; i < arrlen(lines); ++i) {
         // TODO: Fix to print in order rather than segmented
         art_cursor = art_drawline(art_cursor, width);
         if (!is_entry_null(lines[i]) && strlen(lines[i].value) > 0)
             printf("%s%s", lines[i].name, lines[i].value);
         puts("");
-    }
+    }*/
     while (*art_cursor) {
         art_cursor = art_drawline(art_cursor, width);
         puts("");
@@ -213,6 +222,7 @@ void get_pkgs_info(char* buf, size_t max_size) {
 // platform-specific kernel bindings 
 
 #define SKIP_LINE "%*[^\n]\n"
+#define END_LINE "%*[\n]"
 #define SCAN_CPUINFO_KEY "%[^:]:"
 
 void get_cpuinfo_model(char* buf, size_t max_size) {
@@ -227,10 +237,11 @@ void get_cpuinfo_model(char* buf, size_t max_size) {
     int clkkhz;
 
     // skip to model name
-    fscanf(fs, SKIP_LINE SKIP_LINE SKIP_LINE SKIP_LINE SCAN_CPUINFO_KEY "%s", key, model_prefix);
+    fscanf(fs, SKIP_LINE SCAN_CPUINFO_KEY "%s\n", key, model_prefix);
     // skip to siblings
-    fscanf(fs, SKIP_LINE SKIP_LINE SKIP_LINE SKIP_LINE\
-           SKIP_LINE SKIP_LINE SCAN_CPUINFO_KEY "%d", key, &threads);
+    fscanf(fs, SKIP_LINE SKIP_LINE SKIP_LINE SKIP_LINE \
+           SKIP_LINE SKIP_LINE SKIP_LINE SKIP_LINE \
+           SCAN_CPUINFO_KEY "%d", key, &threads);
 
     // cpuinfo doesnt HAVE INFO ABOUT CPU CLOCK MAX 
     fs = freopen("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq", "r", fs);
