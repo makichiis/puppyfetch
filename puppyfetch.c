@@ -136,13 +136,6 @@ int main(int argc, const char** argv) {
         printf("%s%s\n", lines[i].name, lines[i].value);
     }
     
-    /*for (size_t i = 0; i < arrlen(lines); ++i) {
-        // TODO: Fix to print in order rather than segmented
-        art_cursor = art_drawline(art_cursor, width);
-        if (!is_entry_null(lines[i]) && strlen(lines[i].value) > 0)
-            printf("%s%s", lines[i].name, lines[i].value);
-        puts("");
-    }*/
     while (*art_cursor) {
         art_cursor = art_drawline(art_cursor, width);
         puts("");
@@ -230,6 +223,9 @@ struct vendor_mapping {
     const char* prettier;
 };
 
+// TODO: As it turns out, this is architecture-dependent. I need to figure out how to 
+// use cpuinfo.h to fetch this info without reading cpuinfo.
+
 void get_cpuinfo_model(char* buf, size_t max_size) {
     FILE* fs = fopen("/proc/cpuinfo", "r");
     if (!fs) {
@@ -262,10 +258,6 @@ void get_cpuinfo_model(char* buf, size_t max_size) {
             strcpy(vendor, mappings[i].prettier);
             break;
         }
-    }
-
-    if (strcmp("AuthenticAMD", vendor) == 0) {
-        strcpy(vendor, "AuthenticAMD");
     }
 
     // cpuinfo doesnt HAVE INFO ABOUT CPU CLOCK MAX 
