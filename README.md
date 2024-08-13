@@ -19,3 +19,11 @@ $ sudo make install
 ```sh
 $ sudo make uninstall 
 ```
+
+# TODO
+- [ ] Compatability with Android devices. 
+- [ ] Compatability with Raspberry PI and other embedded chips running Linux.
+
+# Contributions
+If you want to add support for a certain OS/device(s) or add more aliases to 
+the CPU list, feel free to PR and I'll review it.
