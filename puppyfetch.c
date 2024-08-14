@@ -1,3 +1,4 @@
+#include <linux/limits.h>
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
@@ -68,6 +69,17 @@ void get_meminfo_usage(char* buf, size_t max_size);
  * @brief Get OS name.
  */  
 void get_os(char* buf, size_t max_size);
+
+#define CONFIG_DIR ".config/puppyfetch"
+
+/**
+ * @brief Returns a pointer to a statically defined path to this 
+ * program's config folder. Linux-only, with 4096 PATH_MAX.
+ * @note This function is not thread safe. I don't see that ever
+ * becoming a problem, but if it does I will probably add a 
+ * mutex.
+ */ 
+const char* config_path();
 
 #define arrlen(arr) (sizeof arr / sizeof *arr)
 
@@ -178,39 +190,6 @@ const char* art_drawline(const char* art_cursor, size_t total_width) {
     return 1 + art_cursor;
 }
 
-// deprecated
-void get_pkgs_info(char* buf, size_t max_size) {
-    FILE* fp = popen("dpkg -l", "r");
-    
-    // Would it be faster to just read from the stream directly?
-    // especially if im using io_uring which will paralellize
-    // this anyway.
-    
-    ssize_t dpkg_count = -5; // exclude header rows 
-
-    char pbuf[256];
-    ssize_t res = 0;
-    while (1) {
-        res = read(fileno(fp), pbuf, sizeof pbuf);
-        
-        if (res == -1) {
-            fprintf(stderr, "%s: Pipe broken with errno %d\n",
-                    this_path, errno);
-            break;
-        }
-        
-        if (res == 0) 
-            break;
-
-        for (ssize_t i = 0; i < res; ++i)
-            if (pbuf[i] == '\n')
-                ++dpkg_count;
-    }
-    pclose(fp);
-
-    snprintf(buf, max_size, "dpkg (%ld)", dpkg_count);
-}
-
 // I have no idea how to do this on a system level without 
 // platform-specific kernel bindings 
 
@@ -249,6 +228,7 @@ void get_cpuinfo_model(char* buf, size_t max_size) {
     // The array length is arbitrary. Extend it if the list gets too big.
     struct vendor_mapping mappings[64] = {
         { "AuthenticAMD", /* --> */ "AMD" },
+        { "GenuineIntel", /* --> */ "Intel" },
     };
 
     for (size_t i = 0; 
@@ -347,5 +327,25 @@ void get_os(char* buf, size_t max_size) {
     }
 
     fclose(fs);
+}
+
+#define STR_EMPTY(str) (!*str)
+
+const char* config_path() {
+    static char config_dir[PATH_MAX] = {'\0'};
+
+    if (STR_EMPTY(config_dir)) {
+        char* home_dir = getenv("HOME");
+        if (!home_dir) {
+            // fail quietly. config will not be 
+            // used if not found. Add verbose arg?
+            return NULL;
+        }
+        size_t home_dir_sz = strlen(home_dir); // \0 will be overwritten
+        strncpy(config_dir, home_dir, PATH_MAX);
+        strncpy(config_dir + home_dir_sz, "/" CONFIG_DIR, PATH_MAX - home_dir_sz);
+    }
+
+    return config_dir;
 }
 
