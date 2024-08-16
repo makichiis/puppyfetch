@@ -1,11 +1,14 @@
-#include <linux/limits.h>
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
+
 #include <sys/ioctl.h>
+#include <sys/stat.h>
 #include <sys/utsname.h>
+#include <linux/limits.h>
 
 #include "ANSI-color-codes.h"
 
@@ -18,6 +21,18 @@ const char* puppy =
 "  / - \\    \n" \
 " /    |    \n" \
 "V__) ||    \n";
+
+struct vendor_mapping {
+    const char* vendor;
+    const char* prettier;
+};
+
+// prettify certain vendor names 
+// TODO: Contributions welcome
+static struct vendor_mapping mappings[] = {
+    { "AuthenticAMD", /* --> */ "AMD" },
+    { "GenuineIntel", /* --> */ "Intel" },
+};
 
 /**
  * @brief Get the square width of a string whose rows are delimited by newlines.
@@ -126,6 +141,7 @@ int main(int argc, const char** argv) {
     char userbuf[USERNAME_BUFSZ+HOSTNAME_BUFSZ + 64]; // 64 for color padding
     snprintf(userbuf, sizeof userbuf, HMAG "%s" reset "@" HBLU "%s" reset, username, hostname);
 
+    // TODO: Color procedurally
     struct info_entry lines[6] = {
         { "", userbuf },
         { HBLU "os     " reset, os_name },
@@ -138,6 +154,16 @@ int main(int argc, const char** argv) {
     const char* art = puppy;
     const char* art_cursor = art;
     size_t width = get_art_square_width(art);
+
+    const char* config_dir = config_path();
+    bool use_config = config_dir != NULL;
+
+    if (use_config) {
+        struct stat statbuf; 
+        if (stat(config_dir, &statbuf) == -1) {
+            mkdir(config_dir, 0700);
+        }
+    }
 
     for (size_t i = 0; i < arrlen(lines); ++i) {
         while (is_entry_null(lines[i]) || strlen(lines[i].value) == 0)
@@ -197,13 +223,11 @@ const char* art_drawline(const char* art_cursor, size_t total_width) {
 #define END_LINE "%*[\n]"
 #define SCAN_CPUINFO_KEY "%[^:]:"
 
-struct vendor_mapping {
-    const char* vendor;
-    const char* prettier;
-};
-
 // TODO: As it turns out, this is architecture-dependent. I need to figure out how to 
 // use cpuinfo.h to fetch this info without reading cpuinfo.
+// Platforms that need patches:
+//  - Various Raspberry PI devices 
+//  - Android devices should be fine, but be sensitive to formatting inconsistencies
 
 void get_cpuinfo_model(char* buf, size_t max_size) {
     FILE* fs = fopen("/proc/cpuinfo", "r");
@@ -223,14 +247,7 @@ void get_cpuinfo_model(char* buf, size_t max_size) {
            SKIP_LINE SKIP_LINE SKIP_LINE SKIP_LINE \
            SCAN_CPUINFO_KEY "%d", key, &threads);
 
-    // prettify certain vendor names 
-    // TODO: Contributions welcome
-    // The array length is arbitrary. Extend it if the list gets too big.
-    struct vendor_mapping mappings[64] = {
-        { "AuthenticAMD", /* --> */ "AMD" },
-        { "GenuineIntel", /* --> */ "Intel" },
-    };
-
+    // vendor mapping 
     for (size_t i = 0; 
             (i < sizeof mappings / sizeof (struct vendor_mapping)) 
             && mappings[i].vendor != NULL; ++i) {
@@ -341,7 +358,7 @@ const char* config_path() {
             // used if not found. Add verbose arg?
             return NULL;
         }
-        size_t home_dir_sz = strlen(home_dir); // \0 will be overwritten
+        size_t home_dir_sz = strlen(home_dir); // null byte will be overwritten
         strncpy(config_dir, home_dir, PATH_MAX);
         strncpy(config_dir + home_dir_sz, "/" CONFIG_DIR, PATH_MAX - home_dir_sz);
     }

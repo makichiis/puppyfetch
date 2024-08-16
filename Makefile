@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -O2 -Wno-unused-result -Wno-unused-parameter
+CFLAGS = -Wall -Wextra -O3 -Wno-unused-result -Wno-unused-parameter
 TARGET = puppyfetch
 SRC = puppyfetch.c
 PREFIX = /usr/bin
@@ -8,6 +8,7 @@ all: $(TARGET)
 
 $(TARGET): $(SRC)
 	$(CC) $(CFLAGS) -o $(TARGET) $(SRC)
+	strip $(TARGET)
 
 .PHONY: install
 install: $(TARGET)
