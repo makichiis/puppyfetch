@@ -14,13 +14,20 @@
 
 #define ERR_OS_BROKEN_STREAM 25
 
-const char* puppy = 
+/*const char* puppy = 
 "  /^ ^\\    \n" \
 " / 0 0 \\   \n" \
 " V\\ Y /V   \n" \
 "  / - \\    \n" \
 " /    |    \n" \
-"V__) ||    \n";
+"V__) ||    \n";*/
+
+// TODO: Fix formatting
+const char* puppy = 
+"      ╱‾‾‾‾╲       \n"
+"     /  ╱╲  \\          \n"
+"/‾‾\\―\\  ╲╱  /―/‾‾\\      \n"
+"\\__/  ╲____╱  \\__/     \n";
 
 struct vendor_mapping {
     const char* vendor;
@@ -227,9 +234,21 @@ const char* art_drawline(const char* art_cursor, size_t total_width) {
 // use cpuinfo.h to fetch this info without reading cpuinfo.
 // Platforms that need patches:
 //  - Various Raspberry PI devices 
-//  - Android devices should be fine, but be sensitive to formatting inconsistencies
+//  - Android devices 
+//      - OnePlus6T 
+
+bool architecture_is_arm() { return true; }
+
+void get_cpuinfo_model_arm(char* buf, size_t max_size) {
+
+}
 
 void get_cpuinfo_model(char* buf, size_t max_size) {
+    if (architecture_is_arm()) {
+        get_cpuinfo_model_arm(buf, max_size);
+        return;
+    }
+
     FILE* fs = fopen("/proc/cpuinfo", "r");
     if (!fs) {
         return;
