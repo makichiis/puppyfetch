@@ -14,20 +14,20 @@
 
 #define ERR_OS_BROKEN_STREAM 25
 
-/*const char* puppy = 
+const char* puppy = 
 "  /^ ^\\    \n" \
 " / 0 0 \\   \n" \
 " V\\ Y /V   \n" \
 "  / - \\    \n" \
 " /    |    \n" \
-"V__) ||    \n";*/
+"V__) ||    \n";
 
 // TODO: Fix formatting
-const char* puppy = 
+/*const char* puppy = 
 "      ╱‾‾‾‾╲       \n"
 "     /  ╱╲  \\          \n"
 "/‾‾\\―\\  ╲╱  /―/‾‾\\      \n"
-"\\__/  ╲____╱  \\__/     \n";
+"\\__/  ╲____╱  \\__/     \n";*/
 
 struct vendor_mapping {
     const char* vendor;
