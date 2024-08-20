@@ -237,7 +237,7 @@ const char* art_drawline(const char* art_cursor, size_t total_width) {
 //  - Android devices 
 //      - OnePlus6T 
 
-bool architecture_is_arm() { return true; }
+bool architecture_is_arm() { return false; }
 
 void get_cpuinfo_model_arm(char* buf, size_t max_size) {
 
