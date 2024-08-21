@@ -237,10 +237,27 @@ const char* art_drawline(const char* art_cursor, size_t total_width) {
 //  - Android devices 
 //      - OnePlus6T 
 
-bool architecture_is_arm() { return false; }
+bool architecture_is_arm() {
+#ifdef __arm__ 
+    return true;
+#endif 
+    return false;
+}
 
 void get_cpuinfo_model_arm(char* buf, size_t max_size) {
+    FILE* fs = fopen("/proc/cpuinfo", "r");
+    if (!fs) {
+        return;
+    }
 
+    char key[32];
+    char arch[32];
+    // TODO: cores maybe? cant compute threads. 
+    
+    fscanf(fs, SCAN_CPUINFO_KEY "%s\n", key, arch);
+    snprintf(buf, max_size, "%s", arch);
+
+    fclose(fs);
 }
 
 void get_cpuinfo_model(char* buf, size_t max_size) {
@@ -312,26 +329,28 @@ void get_meminfo_usage(char* buf, size_t max_size) {
         if (strcmp(param_name, "MemTotal:") == 0) {
             mem_total = value;
             mem_used = mem_total;
+            printf("total\n");
         } else if (strcmp(param_name, "Shmem:") == 0) {
-            mem_used += value;
+            //mem_used += value;
         } else if (strcmp(param_name, "MemFree:") == 0) {
+            printf("used\n");
             mem_used -= value;
         } else if (strcmp(param_name, "Buffers:") == 0) {
-            mem_used -= value;
+            //mem_used -= value;
         } else if (strcmp(param_name, "Cached") == 0) {
-            mem_used -= value;
+            //mem_used -= value;
         } else if (strcmp(param_name, "SReclaimable:") == 0) {
-            mem_used -= value;
-            break;
+            //mem_used -= value;
+            //break;
         } else if (strcmp(param_name, "Cached:") == 0) {
-            mem_used -= value;
+            //mem_used -= value;
         }
     }
 
     fclose(fs);
 
-    long long memused_mib = (double)mem_used / 1000 / 1.0049;
-    long long memtotal_mib = (double)mem_total / 1000 / 1.0049;
+    long long memused_mib = (double)mem_used / 1049;
+    long long memtotal_mib = (double)mem_total / 1049;
 
     snprintf(buf, max_size, "%lld mib / %lld mib", memused_mib, memtotal_mib);
 }
