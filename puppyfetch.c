@@ -316,6 +316,7 @@ void get_meminfo_usage(char* buf, size_t max_size) {
     }
 
     long long mem_total = 0;
+    long long mem_available = 0;
     long long mem_used = 0;
 
     char param_name[64];
@@ -328,13 +329,10 @@ void get_meminfo_usage(char* buf, size_t max_size) {
 
         if (strcmp(param_name, "MemTotal:") == 0) {
             mem_total = value;
-            mem_used = mem_total;
-            printf("total\n");
         } else if (strcmp(param_name, "Shmem:") == 0) {
             //mem_used += value;
-        } else if (strcmp(param_name, "MemFree:") == 0) {
-            printf("used\n");
-            mem_used -= value;
+        } else if (strcmp(param_name, "MemAvailable:") == 0) {
+            mem_available = value;
         } else if (strcmp(param_name, "Buffers:") == 0) {
             //mem_used -= value;
         } else if (strcmp(param_name, "Cached") == 0) {
@@ -348,9 +346,11 @@ void get_meminfo_usage(char* buf, size_t max_size) {
     }
 
     fclose(fs);
+    mem_used = mem_total - mem_available;
 
-    long long memused_mib = (double)mem_used / 1049;
-    long long memtotal_mib = (double)mem_total / 1049;
+    long long memused_mib = (double)mem_used / 1049; // approximate. Precise
+    // would be mem_used * 0.00095367431640625
+    long long memtotal_mib = (double)mem_total / 1049; // same here obv
 
     snprintf(buf, max_size, "%lld mib / %lld mib", memused_mib, memtotal_mib);
 }
