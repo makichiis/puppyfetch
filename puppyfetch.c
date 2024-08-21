@@ -327,21 +327,12 @@ void get_meminfo_usage(char* buf, size_t max_size) {
             break;
         }
 
+        // Generalized because structure may vary between systems
+
         if (strcmp(param_name, "MemTotal:") == 0) {
             mem_total = value;
-        } else if (strcmp(param_name, "Shmem:") == 0) {
-            //mem_used += value;
         } else if (strcmp(param_name, "MemAvailable:") == 0) {
             mem_available = value;
-        } else if (strcmp(param_name, "Buffers:") == 0) {
-            //mem_used -= value;
-        } else if (strcmp(param_name, "Cached") == 0) {
-            //mem_used -= value;
-        } else if (strcmp(param_name, "SReclaimable:") == 0) {
-            //mem_used -= value;
-            //break;
-        } else if (strcmp(param_name, "Cached:") == 0) {
-            //mem_used -= value;
         }
     }
 
