@@ -237,13 +237,6 @@ const char* art_drawline(const char* art_cursor, size_t total_width) {
 //  - Android devices 
 //      - OnePlus6T 
 
-bool architecture_is_arm() {
-#ifdef __arm__ 
-    return true;
-#endif 
-    return false;
-}
-
 void get_cpuinfo_model_arm(char* buf, size_t max_size) {
     FILE* fs = fopen("/proc/cpuinfo", "r");
     if (!fs) {
@@ -260,12 +253,52 @@ void get_cpuinfo_model_arm(char* buf, size_t max_size) {
     fclose(fs);
 }
 
+// max size is 48 anyway
+void get_cpuinfo_cpuid(char *buf) {
+    asm(
+      "mov eax, 0x80000002\n"
+      "cpuid\n"
+      "mov [rdi], eax\n"
+      "mov [rdi+4], ebx\n"
+      "mov [rdi+8], ecx\n"
+      "mov [rdi+12], edx\n"
+      "mov eax, 0x80000003\n"
+      "cpuid\n"
+      "mov [rdi+16], eax\n"
+      "mov [rdi+20], ebx\n"
+      "mov [rdi+24], ecx\n"
+      "mov [rdi+28], edx\n"
+      "mov eax, 0x80000004\n"
+      "cpuid\n"
+      "mov [rdi+32], eax\n"
+      "mov [rdi+36], ebx\n"
+      "mov [rdi+40], ecx\n"
+      "mov [rdi+44], edx\n"
+      : "=D" (buf)
+      :
+      : "eax", "ebx", "ecx", "edx"
+    );
+    buf[48] = 0;
+}
+
+
 void get_cpuinfo_model(char* buf, size_t max_size) {
-    if (architecture_is_arm()) {
+    // this was most likely optimized out oh well
+    #ifdef __arm__
         get_cpuinfo_model_arm(buf, max_size);
         return;
+    #endif
+    unsigned int eax;
+    asm(
+      "mov eax, 0x80000000\n"
+      "cpuid\n"
+      : "=a"(eax)
+      :
+    );
+    if(eax >= 0x80000004){
+        get_cpuinfo_cpuid(buf);
+        return;
     }
-
     FILE* fs = fopen("/proc/cpuinfo", "r");
     if (!fs) {
         return;
@@ -310,40 +343,10 @@ void get_cpuinfo_model(char* buf, size_t max_size) {
 // NOTE: Memory is off. Needs to be patched.
 
 void get_meminfo_usage(char* buf, size_t max_size) {
-    FILE* fs = fopen("/proc/meminfo", "r");
-    if (!fs) {
-        return;
-    }
-
-    long long mem_total = 0;
-    long long mem_available = 0;
-    long long mem_used = 0;
-
-    char param_name[64];
-    long long value;
-    while (1) {
-        int res = fscanf(fs, "%s %lld", param_name, &value);
-        if (res == EOF) {
-            break;
-        }
-
-        // Generalized because structure may vary between systems
-
-        if (strcmp(param_name, "MemTotal:") == 0) {
-            mem_total = value;
-        } else if (strcmp(param_name, "MemAvailable:") == 0) {
-            mem_available = value;
-        }
-    }
-
-    fclose(fs);
-    mem_used = mem_total - mem_available;
-
-    long long memused_mib = (double)mem_used / 1049; // approximate. Precise
-    // would be mem_used * 0.00095367431640625
-    long long memtotal_mib = (double)mem_total / 1049; // same here obv
-
-    snprintf(buf, max_size, "%lld mib / %lld mib", memused_mib, memtotal_mib);
+  // we dont care about standardization anyway
+  long total = sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGESIZE) / 1049 / 1000;
+  long used = sysconf(_SC_AVPHYS_PAGES) * sysconf(_SC_PAGESIZE) / 1049 / 1000;
+  snprintf(buf, max_size, "%lu mib / %lu mib", total - used, total);
 }
 
 #define OS_RELEASE_GUARD_LEN 20 

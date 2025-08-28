@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -O3 -Wno-unused-result -Wno-unused-parameter
+CFLAGS = -Wall -Wextra -O3 -Wno-unused-result -Wno-unused-parameter -masm=intel
 TARGET = puppyfetch
 SRC = puppyfetch.c
 PREFIX = /usr/bin
