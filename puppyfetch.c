@@ -8,7 +8,7 @@
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <sys/utsname.h>
-#include <linux/limits.h>
+#include <limits.h>
 
 #include "ANSI-color-codes.h"
 
