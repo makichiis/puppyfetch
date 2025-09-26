@@ -1,24 +1,15 @@
-CC = gcc
-CFLAGS = -Wall -Wextra -O3 -Wno-unused-result -Wno-unused-parameter -masm=intel
-TARGET = puppyfetch
-SRC = puppyfetch.c
-PREFIX = /usr/bin
+.PHONY: install uninstall clean
 
-all: $(TARGET)
+PREFIX= /usr
 
-$(TARGET): $(SRC)
-	$(CC) $(CFLAGS) -o $(TARGET) $(SRC)
-	strip $(TARGET)
+puppyfetch: puppyfetch.c
+	$(CC) -O3 -Wno-unused-result -Wno-unused-parameter -masm=intel $(CFLAGS) -o $@ $<
 
-.PHONY: install
-install: $(TARGET)
-	install -m 755 $(TARGET) $(PREFIX)/$(TARGET)
+install: puppyfetch
+	install -Dm 755 puppyfetch $(DESTDIR)$(PREFIX)/bin/puppyfetch
 
-.PHONY: uninstall 
 uninstall:
-	rm -f $(PREFIX)/$(TARGET)
+	rm -f $(DESTDIR)$(PREFIX)/bin/puppyfetch
 
-.PHONY: clean
 clean:
-	rm -f $(TARGET)
-
+	rm -f puppyfetch
